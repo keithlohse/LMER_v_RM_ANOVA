@@ -259,6 +259,7 @@ summary(time_01)
 # Centering the time-variable on the first time point makes a lot of sense 
 # conceptually, but it is important to remember what that means when interpreting 
 # other variables. 
+
 # As you might recall from multiple regression in previous courses, when 
 # interaction terms are included in a model, the effect of one variable is 
 # being interpreted when the other variable is equal to 0. 
@@ -272,173 +273,172 @@ summary(time_01)
 # With our new variable of time in years, we want to see if we can explain the
 # residual variation in subject's slopes and intercepts.
 
-# Main-Effect Model: Equivalent to Conditional Intercepts
-cond_00<-lmer(score~
+
+## Comparing Linear and Curvilinear Effects of Time ----------------------------
+DATA$year.0_sq<-DATA$year.0^2
+DATA$year.0_cu<-DATA$year.0^3
+
+# Effect of Grade on Cubic Time
+cond_03<-lmer(score~
                 # Fixed-effects
-                1+year.0+Group+
+                1+year.0*Group+year.0_sq*Group+year.0_cu*Group+
                 # Random-effects
-                (1+year.0|subID), data=DATA, REML=FALSE)
-summary(cond_00)
+                (1+year.0+year.0_sq+year.0_cu|subID), data=DATA, REML=FALSE)
 
-# Interaction Model: Conditional Intercepts and Slopes
-cond_01<-lmer(score~
-                # Fixed-effects
-                1+year.0*Group+
-                # Random-effects
-                (1+year.0|subID), data=DATA, REML=FALSE)
-summary(cond_01)
-
-
-anova(cond_00,cond_01)
-
-
-# Contrast coding the group variable ---- 
-contrasts(DATA$AIS_grade)
-
-DATA$AIS_grade.c<-DATA$AIS_grade
-contrasts(DATA$AIS_grade.c)<-contr.poly(3)
-contrasts(DATA$AIS_grade.c)
-
-# Main Effects with contrast coded group variable
-cond_02<-lmer(rasch_FIM~
-                # Fixed-effects
-                1+year.0+AIS_grade.c+
-                # Random-effects
-                (1+year.0|subID), data=DATA, REML=FALSE)
-summary(cond_02)
-
-# Interaction Model with contrast coded group variable
-cond_03<-lmer(rasch_FIM~
-                # Fixed-effects
-                1+year.0*AIS_grade.c+
-                # Random-effects
-                (1+year.0|subID), data=DATA, REML=FALSE)
+Anova(cond_03, type="III")
 summary(cond_03)
 
 
-anova(cond_02,cond_03)
+##################################
+#ezANOVA() using the {ez} package#
+##################################
+head(DATA)
+DATA$time_cat<-as.factor(DATA$time)
+summary(DATA$Group)
+mod_ANOVA <- ezANOVA(data = DATA,
+                  dv = .(score), 
+                  wid = .(subID),
+                  within = .(time_cat),
+                  between =.(Group),
+                  type = 3,
+                  detailed = TRUE,
+                  return_aov = TRUE)
+mod_ANOVA
 
 
-## Evaluating our Models -------------------------------------------------------
-# Although the interaction model was not statistically better than the main-
-# effects model, it can useful to present the full model to show the non-
-# significant interactions. 
-
-summary(cond_01)
-
-# How much variation in individual slopes and intercepts did we explain with
-# AIS Grade?
-VarCorr(time_00)
-VarCorr(cond_01)
 
 
-# We can also plot the fixed-effects estimates from our models "on top" of the 
-# raw data to show the conditional effects. 
-
-## Linear Fit by AIS Category --------------------------------------------------
-summary(cond_01)
-FIXED<-data.frame(AIS_grade=c("C1-4","C5-8","paraplegia"),
-                 Intercepts=c(20.113, (20.113+7.779), (20.113+15.89)),
-                 Slopes=c(22.348, (22.348+4.714), (22.348+7.257)))
-FIXED
-
-
-g1<-ggplot(DATA, aes(x = year, y = rasch_FIM)) +
-  geom_point(fill="grey", pch=21, size=2, stroke=1.25) +
-  facet_wrap(~AIS_grade)
-g2<-g1+scale_x_continuous(name = "Time from Admission (Years)") +
-  scale_y_continuous(name = "Rasch-Scaled FIM Score (0-100)",limits=c(0,100))
+## ------------------- Visualizing Missing Data --------------------------------
+## Scores with complete data ---------------------------------------------------
+g1<-ggplot(DATA, aes(x = time, y = score)) +
+  geom_point(aes(fill=as.factor(subID)), pch=21, size=2, stroke=1.25) +
+  geom_line(aes(group=subID)) +
+  facet_wrap(~Group)
+g2<-g1+scale_x_continuous(name = "Time (Months)", breaks=c(0:18)) +
+  scale_y_continuous(name = "Score (0-100)",limits=c(0,100))
 g3 <- g2 + theme_bw() + 
   theme(axis.text=element_text(size=14, colour="black"), 
         axis.title=element_text(size=14,face="bold")) +
-  theme(strip.text.x = element_text(size = 14))
+  theme(strip.text.x = element_text(size = 14))+
+  theme(legend.position="none")
 
 plot(g3)
 
-g4<-g3+geom_abline(aes(intercept=Intercepts, slope=Slopes, col=AIS_grade,
-                       lty = AIS_grade), lwd=2, FIXED)
-plot(g4)
-
-## -----------------------------------------------------------------------------
 
 
-## Checking the Assumptions of our Model ---------------------------------------
-# The DATA data frame is what we might call our Level 1 matrix. That is, each
-# person and time point is represented. For checking out statistical assumptions, 
-# it will also be helpful for us to create a Level 2 matrix. The Level 2 matrix
-# will preserve participant information, but ignore time information.
+## Scores with data missing random ---------------------------------------------
+g1<-ggplot(DATA, aes(x = time, y = score_MAR)) +
+  geom_point(aes(fill=as.factor(subID)), pch=21, size=2, stroke=1.25) +
+  geom_line(aes(group=subID)) +
+  facet_wrap(~Group)
+g2<-g1+scale_x_continuous(name = "Time (Months)", breaks=c(0:18)) +
+  scale_y_continuous(name = "Score (0-100)",limits=c(0,100))
+g3 <- g2 + theme_bw() + 
+  theme(axis.text=element_text(size=14, colour="black"), 
+        axis.title=element_text(size=14,face="bold")) +
+  theme(strip.text.x = element_text(size = 14))+
+  theme(legend.position="none")
 
-LVL2<-summarize(group_by(DATA, subID),
-                  AIS_grade = AIS_grade[1])
-LVL2
-# At the moment, our LVL2 dataframe contains subject IDs and group information. 
-# Next, lets add the random-effects from our models:
-LVL2$RE_int<-ranef(cond_01)$subID$`(Intercept)`
-LVL2$RE_year<-ranef(cond_01)$subID$year
-# Note that we can add this data on directly because the matrix is sorted by 
-# subID and the the array we are adding is sorted by subID.
-
-LVL2
+plot(g3)
 
 
 
-# Normality ----
-# Residuals at Level 1
-qqnorm(resid(cond_01))
-
-# Residuals at Level 2
-qqnorm(LVL2$RE_int)
-qqnorm(LVL2$RE_year)
 
 
 
-# Homoscedasticity ----
-# Comparable Variances at Level 1
-x <- fitted(cond_01)
-y <- resid(cond_01)/sd(resid(cond_01))
-plot(x=x, y=y, xlab = "Fitted Values", ylab="Standardized Residuals",
-     ylim=c(-4,4))
+## Scores with data missing not at random --------------------------------------
+g1<-ggplot(DATA, aes(x = time, y = score_MNAR)) +
+  geom_point(aes(fill=as.factor(subID)), pch=21, size=2, stroke=1.25) +
+  geom_line(aes(group=subID)) +
+  facet_wrap(~Group)
+g2<-g1+scale_x_continuous(name = "Time (Months)", breaks=c(0:18)) +
+  scale_y_continuous(name = "Score (0-100)",limits=c(0,100))
+g3 <- g2 + theme_bw() + 
+  theme(axis.text=element_text(size=14, colour="black"), 
+        axis.title=element_text(size=14,face="bold")) +
+  theme(strip.text.x = element_text(size = 14))+
+  theme(legend.position="none")
+
+plot(g3)
 
 
-# Comparable Variances at Level 2
-# Intercepts
-LVL2$STD_int<-LVL2$RE_int/sd(LVL2$RE_int)
-plot(x=LVL2$AIS_grade, y=LVL2$STD_int, 
-     xlab = "Fitted Values", ylab="Standardized Residuals",
-     ylim=c(-4,4))
+## Scores with Last Observation Carried Forward --------------------------------
+g1<-ggplot(DATA, aes(x = time, y = score_LOCF)) +
+  geom_point(aes(fill=as.factor(subID)), pch=21, size=2, stroke=1.25) +
+  geom_line(aes(group=subID)) +
+  facet_wrap(~Group)
+g2<-g1+scale_x_continuous(name = "Time (Months)", breaks=c(0:18)) +
+  scale_y_continuous(name = "Score (0-100)",limits=c(0,100))
+g3 <- g2 + theme_bw() + 
+  theme(axis.text=element_text(size=14, colour="black"), 
+        axis.title=element_text(size=14,face="bold")) +
+  theme(strip.text.x = element_text(size = 14))+
+  theme(legend.position="none")
 
-# Slopes
-LVL2$STD_year<-LVL2$RE_year/sd(LVL2$RE_year)
-plot(x=LVL2$AIS_grade, y=LVL2$STD_year, 
-     xlab = "Fitted Values", ylab="Standardized Residuals",
-     ylim=c(-4,4))
-
-
-
-# Influential Participants ----
-# Residuals at Level 1
-plot(DATA$subID, resid(cond_01)/sd(resid(cond_01)), 
-     ylab="Standardized Residuals", xlab="Subject ID",
-     ylim=c(-4,4))
+plot(g3)
 
 
-# Residuals at Level 2
-# Variation in Intercepts
-plot(x=LVL2$subID, y=LVL2$STD_int, 
-     xlab="Subject ID", ylab="Standardized Residual",
-     ylim=c(-4,4))
 
-# Variation in Slopes
-plot(x=LVL2$subID, y=LVL2$STD_year, 
-     xlab="Subject ID", ylab="Standardized Residual",
-     ylim=c(-4,4))
+## -------------- The Effects of Missingness on Time ---------------------------
+# Cubic model with complete data
+complete<-lmer(score~
+                 # Fixed-effects
+                 1+year.0*Group+year.0_sq*Group+year.0_cu*Group+
+                 # Random-effects
+                 (1+year.0+year.0_sq+year.0_cu|subID), data=DATA, REML=FALSE)
+
+comp_ANOVA <- ezANOVA(data = DATA,
+                     dv = .(score), 
+                     wid = .(subID),
+                     within = .(time_cat),
+                     between =.(Group),
+                     type = 3,
+                     detailed = TRUE,
+                     return_aov = TRUE)
+comp_ANOVA
+
+# Cubic model with data Missing at Random
+MAR<-lmer(score_MAR~
+            # Fixed-effects
+            1+year.0*Group+year.0_sq*Group+year.0_cu*Group+            
+            # Random-effects
+            (1+year.0+year.0_sq+year.0_cu|subID), data=DATA, REML=FALSE)
 
 
-## -------------- Exporting the Revised Data File ------------------------------
-# Finally, we want to save our revised data file to include the different 
-# variables we created in a new .csv file.
+# Cubic model with data Missing Not at Random
+MNAR<-lmer(score_NMAR~
+             # Fixed-effects
+             1+year.0*Group+year.0_sq*Group+year.0_cu*Group+             
+             # Random-effects
+             (1+year.0+year.0_sq+year.0_cu|subID), data=DATA, REML=FALSE)
 
-write.csv(DAT2, "./data_JMLD.csv")
+
+
+# Cubic model with Last Observation Carried Forward
+LOCF<-lmer(score_LOCF~
+             # Fixed-effects
+             1+year.0*Group+year.0_sq*Group+year.0_cu*Group+             
+             # Random-effects
+             (1+year.0+year.0_sq+year.0_cu|subID), data=DATA, REML=FALSE)
+
+LOCF_ANOVA <- ezANOVA(data = DATA,
+                      dv = .(score_LOCF), 
+                      wid = .(subID),
+                      within = .(time_cat),
+                      between =.(Group),
+                      type = 3,
+                      detailed = TRUE,
+                      return_aov = TRUE)
+LOCF_ANOVA
+
+
+
+summary(complete)
+summary(MAR)
+summary(MNAR)
+summary(LOCF)
+
+
 
 
 
