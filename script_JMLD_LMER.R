@@ -2,17 +2,18 @@
 # By Keith Lohse, Neurorehabilitation Informatics Lab, 2018-10-19
 
 # Loading the essential libraries. 
-library("ggplot2"); library("lme4"); library("car"); library("dplyr"); library("lmerTest"); 
+library("ggplot2"); library("lme4"); library("car"); 
+library("dplyr"); library("ez");
 
 # If these packages are not installed already, run the following code:
 install.packages("ggplot2"); install.packages("lme4"); install.packages("car"); 
-install.packages("dplyr"); install.packages("lmerTest"); 
+install.packages("dplyr"); install.packages("ez");
 
 
 ##----------------------- Data Cleaning and QA ---------------------------------
 ## Setting the Directory -------------------------------------------------------
 getwd()
-setwd("C:/Otter/Collaboration/Al Kozlowski/")
+setwd("C:/Users/kelop/Documents/GitHub/LMER_v_RM_ANOVA/")
 list.files()
 # Make sure that the file data_session1.csv is saved in your working directory.
 
@@ -26,19 +27,19 @@ head(DATA)
 
 
 # UPDATE
-Alternately you can also download the data file from the web here:
-DATA <- read.csv("https://raw.githubusercontent.com/keithlohse/LMER_Clinical_Science/master/data/data_nonlinear_v4.csv")
-head(DATA)
+# Alternately you can also download the data file from the web here:
+DATA <- read.csv("https://raw.githubusercontent.com/keithlohse/LMER_v_RM_ANOVA/master/data_JMLD.csv")
+
 
 
 ## ----------------------- Basic Data Visualization ----------------------------
 ## FIM scores by group and time -----------------------------------------------
-g1<-ggplot(DATA, aes(x = month, y = rasch_FIM)) +
+g1<-ggplot(DATA, aes(x = time, y = score)) +
   geom_point(aes(fill=as.factor(subID)), pch=21, size=2, stroke=1.25) +
   geom_line(aes(group=subID)) +
-  facet_wrap(~AIS_grade)
-g2<-g1+scale_x_continuous(name = "Time from Admission (Months)", breaks=c(0:18)) +
-  scale_y_continuous(name = "Rasch-Scaled FIM Score (0-100)",limits=c(0,100))
+  facet_wrap(~Group)
+g2<-g1+scale_x_continuous(name = "Time (Months)", breaks=c(0:18)) +
+  scale_y_continuous(name = "Score (0-100)",limits=c(0,100))
 g3 <- g2 + theme_bw() + 
   theme(axis.text=element_text(size=14, colour="black"), 
         axis.title=element_text(size=14,face="bold")) +
@@ -49,12 +50,12 @@ plot(g3)
 ## -----------------------------------------------------------------------------
 
 ## Linear Fit for each person --------------------------------------------------
-g1<-ggplot(DATA, aes(x = month, y = rasch_FIM)) +
+g1<-ggplot(DATA, aes(x = time, y = score)) +
   geom_point(aes(fill=as.factor(subID)), pch=21, size=2, stroke=1.25) +
   stat_smooth(aes(col=subID), se=FALSE, method="lm") +
-  facet_wrap(~AIS_grade)
-g2<-g1+scale_x_continuous(name = "Time from Admission (Months)", breaks=c(0:18)) +
-  scale_y_continuous(name = "Rasch-Scaled FIM Score (0-100)",limits=c(0,100))
+  facet_wrap(~Group)
+g2<-g1+scale_x_continuous(name = "Time (Months)", breaks=c(0:18)) +
+  scale_y_continuous(name = "Score (0-100)",limits=c(0,100))
 g3 <- g2 + theme_bw() + 
   theme(axis.text=element_text(size=14, colour="black"), 
         axis.title=element_text(size=14,face="bold")) +
@@ -65,25 +66,9 @@ plot(g3)
 ## -----------------------------------------------------------------------------
 
 
-## Linear Fit by gender --------------------------------------------------------
-g1<-ggplot(DATA, aes(x = month, y = rasch_FIM)) +
-  geom_point(aes(fill=sex), pch=21, size=2, stroke=1.25) +
-  stat_smooth(aes(lty=sex), col="black", lwd=1.5,se=FALSE, method="lm") +
-  facet_wrap(~AIS_grade)
-g2<-g1+scale_x_continuous(name = "Time from Admission (Months)", breaks=c(0:18)) +
-  scale_y_continuous(name = "Rasch-Scaled FIM Score (0-100)",limits=c(0,100))
-g3 <- g2 + theme_bw() + 
-  theme(axis.text=element_text(size=14, colour="black"), 
-        axis.title=element_text(size=14,face="bold")) +
-  theme(strip.text.x = element_text(size = 14))
-
-plot(g3)
-## -----------------------------------------------------------------------------
-
-
 # Understanding basic random-effects ------------------------------------------
 # Random Intercepts Model ----
-raneff_00<-lmer(rasch_FIM~
+raneff_00<-lmer(score~
                   # Fixed-effects
                   1+
                   # Random-effects
@@ -115,21 +100,23 @@ fitted(raneff_00)
 
 
 # To help us understand the model, we can plot these predictions for each person.
-# First, lets take a subset of the first 10 people:
-first10<-DATA[c(1:180),]
+# First, lets take a subset of the first 6 people:
+head(DATA)
+first06<-DATA[c(1:36),]
+head(first06)
 
 # Second, we'll make a smaller dataset with the predictions for these 10:
-PRED<-data.frame(subID=c("s01","s02","s03","s04","s05","s06","s07","s08","s09", "s10"),
-                 Intercepts=c(coef(raneff_00)$subID[c(1:10),]))
+PRED<-data.frame(subID=c("s01","s02","s03","s04","s05","s06"),
+                 Intercepts=c(coef(raneff_00)$subID[c(1:6),]))
 PRED
 
 
-g1<-ggplot(first10, aes(x = month, y = rasch_FIM)) +
+g1<-ggplot(first06, aes(x = time, y = score)) +
   geom_point(fill="grey", pch=21, size=2, stroke=1.25) +
   geom_line(aes(group=subID)) +
-  facet_wrap(~subID, ncol=3)
-g2<-g1+scale_x_continuous(name = "Time from Admission (Months)", breaks=c(0:18)) +
-  scale_y_continuous(name = "Rasch-Scaled FIM Score (0-100)",limits=c(0,100))
+  facet_wrap(~subID, ncol=2)
+g2<-g1+scale_x_continuous(name = "Time (Months)", breaks=c(0:18)) +
+  scale_y_continuous(name = "Score (0-100)",limits=c(0,100))
 print(g2)
 g3<-g2+geom_abline(aes(intercept=Intercepts, slope=0), col="red", lwd=1.5, PRED)
 plot(g3)
@@ -141,9 +128,9 @@ plot(g3)
 
 
 # Fixed Slope Model ----
-raneff_01<-lmer(rasch_FIM~
+raneff_01<-lmer(score~
                   # Fixed-effects
-                  1+month+
+                  1+time+
                   # Random-effects
                   (1|subID), data=DATA, REML=FALSE)
 summary(raneff_01)
@@ -161,19 +148,19 @@ coef(raneff_01)$subID
 
 
 # As before, let's make a smaller dataset with the predictions for these 10 people:
-PRED<-data.frame(subID=c("s01","s02","s03","s04","s05","s06","s07","s08","s09", "s10"),
-                 Intercepts=c(coef(raneff_01)$subID[c(1:10),1]),
-                 Slopes=c(coef(raneff_01)$subID[c(1:10),2]))
+PRED<-data.frame(subID=c("s01","s02","s03","s04","s05","s06"),
+                 Intercepts=c(coef(raneff_01)$subID[c(1:6),1]),
+                 Slopes=c(coef(raneff_01)$subID[c(1:6),2]))
 PRED
 
 # We can now plot the predictions for each person, note that although each person
 # has a different intercept, they all have the same slope. 
-g1<-ggplot(first10, aes(x = month, y = rasch_FIM)) +
+g1<-ggplot(first06, aes(x = time, y = score)) +
   geom_point(fill="grey", pch=21, size=2, stroke=1.25) +
   geom_line(aes(group=subID)) +
-  facet_wrap(~subID, ncol=3)
-g2<-g1+scale_x_continuous(name = "Time from Admission (Months)", breaks=c(0:18)) +
-  scale_y_continuous(name = "Rasch-Scaled FIM Score (0-100)",limits=c(0,100))
+  facet_wrap(~subID, ncol=2)
+g2<-g1+scale_x_continuous(name = "Time (Months)", breaks=c(0:18)) +
+  scale_y_continuous(name = "Score (0-100)",limits=c(0,100))
 g3<-g2+geom_abline(aes(intercept=Intercepts, slope=Slopes), col="red", lwd=1.5, PRED)
 plot(g3)
 
@@ -183,11 +170,11 @@ plot(g3)
 
 
 # Random Slopes and Intercepts Model ----
-raneff_02<-lmer(rasch_FIM~
+raneff_02<-lmer(score~
                   # Fixed-effects
-                  1+month+
+                  1+time+
                   # Random-effects
-                  (1+month|subID), data=DATA, REML=FALSE)
+                  (1+time|subID), data=DATA, REML=FALSE)
 summary(raneff_02)
 
 # Now when we run the ranef() function, there is random effect for both the 
@@ -204,63 +191,30 @@ coef(raneff_02)$subID
 
 
 # As before, let's make a smaller dataset with the predictions for these 10 people:
-PRED<-data.frame(subID=c("s01","s02","s03","s04","s05","s06","s07","s08","s09", "s10"),
-                 Intercepts=c(coef(raneff_02)$subID[c(1:10),1]),
-                 Slopes=c(coef(raneff_02)$subID[c(1:10),2]))
+PRED<-data.frame(subID=c("s01","s02","s03","s04","s05","s06"),
+                 Intercepts=c(coef(raneff_02)$subID[c(1:6),1]),
+                 Slopes=c(coef(raneff_02)$subID[c(1:6),2]))
 PRED
 
 # Now we can plot the predictions for each person, note that each person has a 
 # different intercept and slope. 
-g1<-ggplot(first10, aes(x = month, y = rasch_FIM)) +
+g1<-ggplot(first06, aes(x = time, y = score)) +
   geom_point(fill="grey", pch=21, size=2, stroke=1.25) +
   geom_line(aes(group=subID)) +
-  facet_wrap(~subID, ncol=3)
-g2<-g1+scale_x_continuous(name = "Time from Admission (Months)", breaks=c(0:18)) +
-  scale_y_continuous(name = "Rasch-Scaled FIM Score (0-100)",limits=c(0,100))
+  facet_wrap(~subID, ncol=2)
+g2<-g1+scale_x_continuous(name = "Time (Months)", breaks=c(0:18)) +
+  scale_y_continuous(name = "Score (0-100)",limits=c(0,100))
 g3<-g2+geom_abline(aes(intercept=Intercepts, slope=Slopes, col=subID), lwd=1.5, PRED)
 plot(g3)
 
 
-## ------------------- Comparing between Models --------------------------------
-# Now that we have our three random-effects models:
-# 1. Random Intercepts
-# 2. Fixed Slopes and Random Intercepts
-# 3. Random Slopes and Random Intercepts
-# ... how do we decide which one is most appropriate?
-
-# We can do this is by analyzing the the variance explained by each model. 
-anova(raneff_00,raneff_01,raneff_02)
-
-# The Wald Test of the change in deviance suggests that Model raneff_01 is a 
-# better explanation of the data than Model raneff_00, and furthermore that 
-# Model raneff_02 is a better explanation of the data than Model raneff_01.
-# More conservatively, we can use the AIC. Without going into detail about the 
-# AIC, lower numbers indicate better model fit and AIC is based on the deviance 
-# but introduces a penalty based on the number of parameters to reduce over-
-# fitting. 
-
-# A complementary step we can take is calculate how much residual variance 
-# we might have left to  explain. 
-# In our multilevel model, keep in mind that we have variance at two levels:
-# 1. Level One: which are the data-points within subjects.
-# 2. Level Two: variation between subjects slopes and intercepts.
-
-# We can get a summary of the random-effects from the "null" model and the 
-# best fitting model by using the VarCorr() function. 
-VarCorr(raneff_00)
-VarCorr(raneff_02)
-
-# These values will help us keep track of how much variance is "available" to 
-# be explained in our subsequent models. Similarly, these values will inform us
-# how much variance our fixed-effects explain at Level 1 and Level 2 (sort of 
-# like an R^2 that has been divided into two parts).
 
 
 
 ## --------------- Unconditional and Conditional Models ------------------------
 # Creating our Time variable ---------------------------------------------------
 
-summary(DATA$month)
+summary(DATA$time)
 # Note the wide range in the month variable (1-18). 
 # There are two issues with this:
 # 1. Time starts at 1 instead of 0
@@ -270,7 +224,7 @@ summary(DATA$month)
 # the time variable in different locations. 
 
 # The first time variable, year0 will set the first assessment equal to 0
-DATA$year<-DATA$month/12
+DATA$year<-DATA$time/12
 DATA$year.0<-DATA$year-min(DATA$year)
 summary(DATA$year.0)
 
@@ -283,7 +237,7 @@ summary(DATA$year.c)
 # fixed-effects and random-effects. 
 
 # Time 0 = the first time time point ----
-time_00<-lmer(rasch_FIM~
+time_00<-lmer(score~
             # Fixed-effects
             1+year.0+
             # Random-effects
@@ -291,7 +245,7 @@ time_00<-lmer(rasch_FIM~
 summary(time_00)
 
 # Time 0 = the mean time of 0.79 years ----
-time_01<-lmer(rasch_FIM~
+time_01<-lmer(score~
                 # Fixed-effects
                 1+year.c+
                 # Random-effects
@@ -319,17 +273,17 @@ summary(time_01)
 # residual variation in subject's slopes and intercepts.
 
 # Main-Effect Model: Equivalent to Conditional Intercepts
-cond_00<-lmer(rasch_FIM~
+cond_00<-lmer(score~
                 # Fixed-effects
-                1+year.0+AIS_grade+
+                1+year.0+Group+
                 # Random-effects
                 (1+year.0|subID), data=DATA, REML=FALSE)
 summary(cond_00)
 
 # Interaction Model: Conditional Intercepts and Slopes
-cond_01<-lmer(rasch_FIM~
+cond_01<-lmer(score~
                 # Fixed-effects
-                1+year.0*AIS_grade+
+                1+year.0*Group+
                 # Random-effects
                 (1+year.0|subID), data=DATA, REML=FALSE)
 summary(cond_01)
