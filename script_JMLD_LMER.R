@@ -6,14 +6,14 @@ library("ggplot2"); library("lme4"); library("car");
 library("dplyr"); library("ez");
 
 # If these packages are not installed already, run the following code:
-install.packages("ggplot2"); install.packages("lme4"); install.packages("car"); 
-install.packages("dplyr"); install.packages("ez");
+# install.packages("ggplot2"); install.packages("lme4"); install.packages("car"); 
+# install.packages("dplyr"); install.packages("ez");
 
 
 ##----------------------- Data Cleaning and QA ---------------------------------
 ## Setting the Directory -------------------------------------------------------
 getwd()
-setwd("C:/Users/kelop/Documents/GitHub/LMER_v_RM_ANOVA/")
+setwd("C:/Users/u6015231/Documents/GitHub/LMER_v_RM_ANOVA/")
 list.files()
 # Make sure that the file data_session1.csv is saved in your working directory.
 
@@ -28,7 +28,7 @@ head(DATA)
 
 # UPDATE
 # Alternately you can also download the data file from the web here:
-DATA <- read.csv("https://raw.githubusercontent.com/keithlohse/LMER_v_RM_ANOVA/master/data_JMLD.csv")
+# DATA <- read.csv("https://raw.githubusercontent.com/keithlohse/LMER_v_RM_ANOVA/master/data_JMLD.csv")
 
 
 
@@ -38,7 +38,7 @@ g1<-ggplot(DATA, aes(x = time, y = score)) +
   geom_point(aes(fill=as.factor(subID)), pch=21, size=2, stroke=1.25) +
   geom_line(aes(group=subID)) +
   facet_wrap(~Group)
-g2<-g1+scale_x_continuous(name = "Time (Months)", breaks=c(0:18)) +
+g2<-g1+scale_x_continuous(name = "Time (Months)", limits=c(0,20)) +
   scale_y_continuous(name = "Score (0-100)",limits=c(0,100))
 g3 <- g2 + theme_bw() + 
   theme(axis.text=element_text(size=14, colour="black"), 
@@ -54,7 +54,7 @@ g1<-ggplot(DATA, aes(x = time, y = score)) +
   geom_point(aes(fill=as.factor(subID)), pch=21, size=2, stroke=1.25) +
   stat_smooth(aes(col=subID), se=FALSE, method="lm") +
   facet_wrap(~Group)
-g2<-g1+scale_x_continuous(name = "Time (Months)", breaks=c(0:18)) +
+g2<-g1+scale_x_continuous(name = "Time (Months)", limits=c(0,20)) +
   scale_y_continuous(name = "Score (0-100)",limits=c(0,100))
 g3 <- g2 + theme_bw() + 
   theme(axis.text=element_text(size=14, colour="black"), 
@@ -66,7 +66,273 @@ plot(g3)
 ## -----------------------------------------------------------------------------
 
 
-# Understanding basic random-effects ------------------------------------------
+
+## --------------- Unconditional and Conditional Models ------------------------
+# Creating our Time variable ---------------------------------------------------
+
+summary(DATA$time)
+# Note the wide range in the month variable (1-18). 
+# There are two issues with this:
+# 1. Time starts at 1 instead of 0
+# 2. This scale is a lot larger than other variables we might want to include.
+
+# To address these issues, we will convert Months to Years and try "centering"
+# the time variable in different locations. 
+
+# The first time variable, year0 will set the first assessment equal to 0
+DATA$year<-DATA$time/12
+DATA$year.0<-DATA$year-min(DATA$year)
+summary(DATA$year.0)
+
+# Next, we will create a mean centered time variable, year.c:
+mean(DATA$year)
+DATA$year.c<-DATA$year-mean(DATA$year)
+summary(DATA$year.c)
+
+
+
+## Unconditional Models --------------------------------------------------------
+DATA$year.0_sq<-DATA$year.0^2
+DATA$year.0_cu<-DATA$year.0^3
+
+## LMER 
+time_LMER<-lmer(score~
+                # Fixed-effects
+                1+year.0+year.0_sq+year.0_cu+
+                # Random-effects
+                (1+year.0+year.0_sq+year.0_cu|subID), data=DATA, REML=FALSE)
+Anova(time_LMER, type="III")
+summary(time_LMER)
+
+
+
+## RM ANOVA
+head(DATA)
+DATA$time_cat<-as.factor(DATA$time)
+summary(DATA$time_cat)
+time_ANOVA <- ezANOVA(data = DATA,
+                     dv = .(score), 
+                     wid = .(subID),
+                     within = .(time_cat),
+                     type = 3,
+                     detailed = TRUE,
+                     return_aov = TRUE)
+time_ANOVA
+
+
+
+## Conditional Models ----------------------------------------------------------
+## LMER
+cond_LMER<-lmer(score~
+                # Fixed-effects
+                1+year.0*Group+year.0_sq*Group+year.0_cu*Group+
+                # Random-effects
+                (1+year.0+year.0_sq+year.0_cu|subID), data=DATA, REML=FALSE)
+
+Anova(cond_LMER, type="III")
+summary(cond_LMER)
+
+
+## RM ANOVA
+cond_ANOVA <- ezANOVA(data = DATA,
+                  dv = .(score), 
+                  wid = .(subID),
+                  within = .(time_cat),
+                  between =.(Group),
+                  type = 3,
+                  detailed = TRUE,
+                  return_aov = TRUE)
+cond_ANOVA
+
+
+
+
+## ------------------------  Missing Data --------------------------------------
+## Scores with complete data ---------------------------------------------------
+g1<-ggplot(DATA, aes(x = time, y = score)) +
+  geom_point(aes(fill=as.factor(subID)), pch=21, size=2, stroke=1.25) +
+  geom_line(aes(group=subID)) +
+  facet_wrap(~Group)
+g2<-g1+scale_x_continuous(name = "Time (Months)", limits=c(0,20)) +
+  scale_y_continuous(name = "Score (0-100)",limits=c(0,100))
+g3 <- g2 + theme_bw() + 
+  theme(axis.text=element_text(size=14, colour="black"), 
+        axis.title=element_text(size=14,face="bold")) +
+  theme(strip.text.x = element_text(size = 14))+
+  theme(legend.position="none")
+
+plot(g3)
+
+
+
+## Scores with data Missing at Random (MAR) ------------------------------------
+g1<-ggplot(DATA, aes(x = time, y = score_MAR)) +
+  geom_point(aes(fill=as.factor(subID)), pch=21, size=2, stroke=1.25) +
+  geom_line(aes(group=subID)) +
+  facet_wrap(~Group)
+g2<-g1+scale_x_continuous(name = "Time (Months)", limits=c(0,20)) +
+  scale_y_continuous(name = "Score (0-100)",limits=c(0,100))
+g3 <- g2 + theme_bw() + 
+  theme(axis.text=element_text(size=14, colour="black"), 
+        axis.title=element_text(size=14,face="bold")) +
+  theme(strip.text.x = element_text(size = 14))+
+  theme(legend.position="none")
+
+plot(g3)
+
+
+sum(as.numeric(is.na(DATA$score_MAR)))
+# There are 101 missing observations in the MAR data
+sum(as.numeric(is.na(DATA$score_MAR)))/length(DATA$score_MAR)
+# We retain ~68% of the original data.
+
+
+## Scores with data Missing Not at Random (MNAR) -------------------------------
+g1<-ggplot(DATA, aes(x = time, y = score_MNAR)) +
+  geom_point(aes(fill=as.factor(subID)), pch=21, size=2, stroke=1.25) +
+  geom_line(aes(group=subID)) +
+  facet_wrap(~Group)
+g2<-g1+scale_x_continuous(name = "Time (Months)", limits=c(0,20)) +
+  scale_y_continuous(name = "Score (0-100)",limits=c(0,100))
+g3 <- g2 + theme_bw() + 
+  theme(axis.text=element_text(size=14, colour="black"), 
+        axis.title=element_text(size=14,face="bold")) +
+  theme(strip.text.x = element_text(size = 14))+
+  theme(legend.position="none")
+
+plot(g3)
+
+
+sum(as.numeric(is.na(DATA$score_MNAR)))
+# There are 91 missing observations in the MNAR data
+sum(as.numeric(is.na(DATA$score_MNAR)))/length(DATA$score_MNAR)
+# We retain ~71%% of the original data.
+
+
+## Scores with Last Observation Carried Forward (LOCF) -------------------------
+g1<-ggplot(DATA, aes(x = time, y = score_LOCF)) +
+  geom_point(aes(fill=as.factor(subID)), pch=21, size=2, stroke=1.25) +
+  geom_line(aes(group=subID)) +
+  facet_wrap(~Group)
+g2<-g1+scale_x_continuous(name = "Time (Months)", limits=c(0,20)) +
+  scale_y_continuous(name = "Score (0-100)",limits=c(0,100))
+g3 <- g2 + theme_bw() + 
+  theme(axis.text=element_text(size=14, colour="black"), 
+        axis.title=element_text(size=14,face="bold")) +
+  theme(strip.text.x = element_text(size = 14))+
+  theme(legend.position="none")
+
+plot(g3)
+
+
+## Scores with Mean Fill for Missing Observations ------------------------------
+g1<-ggplot(DATA, aes(x = time, y = score_MEAN_FILL)) +
+  geom_point(aes(fill=as.factor(subID)), pch=21, size=2, stroke=1.25) +
+  geom_line(aes(group=subID)) +
+  facet_wrap(~Group)
+g2<-g1+scale_x_continuous(name = "Time (Months)", limits=c(0,20)) +
+  scale_y_continuous(name = "Score (0-100)",limits=c(0,100))
+g3 <- g2 + theme_bw() + 
+  theme(axis.text=element_text(size=14, colour="black"), 
+        axis.title=element_text(size=14,face="bold")) +
+  theme(strip.text.x = element_text(size = 14))+
+  theme(legend.position="none")
+
+plot(g3)
+
+head(DATA)
+
+
+## -------------- The Effects of Missingness on Time ---------------------------
+# Cubic model with complete data
+complete<-lmer(score~
+                 # Fixed-effects
+                 1+year.0*Group+year.0_sq*Group+year.0_cu*Group+
+                 # Random-effects
+                 (1+year.0+year.0_sq+year.0_cu|subID), data=DATA, REML=FALSE)
+
+comp_ANOVA <- ezANOVA(data = DATA,
+                     dv = .(score), 
+                     wid = .(subID),
+                     within = .(time_cat),
+                     between =.(Group),
+                     type = 3,
+                     detailed = TRUE,
+                     return_aov = TRUE)
+comp_ANOVA
+
+# Cubic model with data Missing at Random
+MAR<-lmer(score_MAR~
+            # Fixed-effects
+            1+year.0*Group+year.0_sq*Group+year.0_cu*Group+            
+            # Random-effects
+            (1+year.0|subID), data=DATA, REML=FALSE)
+
+
+# Cubic model with data Missing Not at Random
+MNAR<-lmer(score_MNAR~
+             # Fixed-effects
+             1+year.0*Group+year.0_sq*Group+year.0_cu*Group+             
+             # Random-effects
+             (1+year.0|subID), data=DATA, REML=FALSE)
+
+
+
+# Cubic model with Last Observation Carried Forward
+LOCF<-lmer(score_LOCF~
+             # Fixed-effects
+             1+year.0*Group+year.0_sq*Group+year.0_cu*Group+             
+             # Random-effects
+             (1+year.0+year.0_sq+year.0_cu|subID), data=DATA, REML=FALSE)
+
+LOCF_ANOVA <- ezANOVA(data = DATA,
+                      dv = .(score_LOCF), 
+                      wid = .(subID),
+                      within = .(time_cat),
+                      between =.(Group),
+                      type = 3,
+                      detailed = TRUE,
+                      return_aov = TRUE)
+LOCF_ANOVA
+
+
+
+# Cubic model with Mean Fill for Missing Observations
+MF<-lmer(score_MEAN_FILL~
+             # Fixed-effects
+             1+year.0*Group+year.0_sq*Group+year.0_cu*Group+             
+             # Random-effects
+             (1+year.0+year.0_sq+year.0_cu|subID), data=DATA, REML=FALSE)
+
+MF_ANOVA <- ezANOVA(data = DATA,
+                      dv = .(score_MEAN_FILL), 
+                      wid = .(subID),
+                      within = .(time_cat),
+                      between =.(Group),
+                      type = 3,
+                      detailed = TRUE,
+                      return_aov = TRUE)
+MF_ANOVA
+
+
+
+Anova(complete, type="III")
+Anova(MAR, type="III")
+Anova(MNAR, type="III")
+Anova(LOCF, type="III")
+Anova(MF, type="III")
+
+summary(complete)
+summary(MAR)
+summary(MNAR)
+summary(LOCF)
+summary(MF)
+
+
+
+
+## ---------------------------- Appendix ---------------------------------------
+# Understanding basic random-effects -------------------------------------------
 # Random Intercepts Model ----
 raneff_00<-lmer(score~
                   # Fixed-effects
@@ -206,241 +472,6 @@ g2<-g1+scale_x_continuous(name = "Time (Months)", breaks=c(0:18)) +
   scale_y_continuous(name = "Score (0-100)",limits=c(0,100))
 g3<-g2+geom_abline(aes(intercept=Intercepts, slope=Slopes, col=subID), lwd=1.5, PRED)
 plot(g3)
-
-
-
-
-
-## --------------- Unconditional and Conditional Models ------------------------
-# Creating our Time variable ---------------------------------------------------
-
-summary(DATA$time)
-# Note the wide range in the month variable (1-18). 
-# There are two issues with this:
-# 1. Time starts at 1 instead of 0
-# 2. This scale is a lot larger than other variables we might want to include.
-
-# To address these issues, we will convert Months to Years and try "centering"
-# the time variable in different locations. 
-
-# The first time variable, year0 will set the first assessment equal to 0
-DATA$year<-DATA$time/12
-DATA$year.0<-DATA$year-min(DATA$year)
-summary(DATA$year.0)
-
-# Next, we will create a mean centered time variable, year.c:
-mean(DATA$year)
-DATA$year.c<-DATA$year-mean(DATA$year)
-summary(DATA$year.c)
-
-# Let's look at the effects these two different time variables have on the 
-# fixed-effects and random-effects. 
-
-# Time 0 = the first time time point ----
-time_00<-lmer(score~
-            # Fixed-effects
-            1+year.0+
-            # Random-effects
-            (1+year.0|subID), data=DATA, REML=FALSE)
-summary(time_00)
-
-# Time 0 = the mean time of 0.79 years ----
-time_01<-lmer(score~
-                # Fixed-effects
-                1+year.c+
-                # Random-effects
-                (1+year.c|subID), data=DATA, REML=FALSE)
-summary(time_01)
-
-# Compare the fixed-effects of the intercept and the slope between the two models.
-# Compare the random-effects between the two models.
-
-
-# Centering the time-variable on the first time point makes a lot of sense 
-# conceptually, but it is important to remember what that means when interpreting 
-# other variables. 
-
-# As you might recall from multiple regression in previous courses, when 
-# interaction terms are included in a model, the effect of one variable is 
-# being interpreted when the other variable is equal to 0. 
-# Thus, if we had year.0 in our model, that would mean the effects of other 
-# variables are being evaluated when time = 0, at the initial assessment. 
-# Conversely, if we use year.c in our model, that would mean the effect of other
-# variables are being evaluated when time = 0, which is at 0.79 yrs (or 9.5 months).
-
-
-## Conditional Model: Does the slope change as a function of AIS grade? ----
-# With our new variable of time in years, we want to see if we can explain the
-# residual variation in subject's slopes and intercepts.
-
-
-## Comparing Linear and Curvilinear Effects of Time ----------------------------
-DATA$year.0_sq<-DATA$year.0^2
-DATA$year.0_cu<-DATA$year.0^3
-
-# Effect of Grade on Cubic Time
-cond_03<-lmer(score~
-                # Fixed-effects
-                1+year.0*Group+year.0_sq*Group+year.0_cu*Group+
-                # Random-effects
-                (1+year.0+year.0_sq+year.0_cu|subID), data=DATA, REML=FALSE)
-
-Anova(cond_03, type="III")
-summary(cond_03)
-
-
-##################################
-#ezANOVA() using the {ez} package#
-##################################
-head(DATA)
-DATA$time_cat<-as.factor(DATA$time)
-summary(DATA$Group)
-mod_ANOVA <- ezANOVA(data = DATA,
-                  dv = .(score), 
-                  wid = .(subID),
-                  within = .(time_cat),
-                  between =.(Group),
-                  type = 3,
-                  detailed = TRUE,
-                  return_aov = TRUE)
-mod_ANOVA
-
-
-
-
-## ------------------- Visualizing Missing Data --------------------------------
-## Scores with complete data ---------------------------------------------------
-g1<-ggplot(DATA, aes(x = time, y = score)) +
-  geom_point(aes(fill=as.factor(subID)), pch=21, size=2, stroke=1.25) +
-  geom_line(aes(group=subID)) +
-  facet_wrap(~Group)
-g2<-g1+scale_x_continuous(name = "Time (Months)", breaks=c(0:18)) +
-  scale_y_continuous(name = "Score (0-100)",limits=c(0,100))
-g3 <- g2 + theme_bw() + 
-  theme(axis.text=element_text(size=14, colour="black"), 
-        axis.title=element_text(size=14,face="bold")) +
-  theme(strip.text.x = element_text(size = 14))+
-  theme(legend.position="none")
-
-plot(g3)
-
-
-
-## Scores with data missing random ---------------------------------------------
-g1<-ggplot(DATA, aes(x = time, y = score_MAR)) +
-  geom_point(aes(fill=as.factor(subID)), pch=21, size=2, stroke=1.25) +
-  geom_line(aes(group=subID)) +
-  facet_wrap(~Group)
-g2<-g1+scale_x_continuous(name = "Time (Months)", breaks=c(0:18)) +
-  scale_y_continuous(name = "Score (0-100)",limits=c(0,100))
-g3 <- g2 + theme_bw() + 
-  theme(axis.text=element_text(size=14, colour="black"), 
-        axis.title=element_text(size=14,face="bold")) +
-  theme(strip.text.x = element_text(size = 14))+
-  theme(legend.position="none")
-
-plot(g3)
-
-
-
-
-
-
-## Scores with data missing not at random --------------------------------------
-g1<-ggplot(DATA, aes(x = time, y = score_MNAR)) +
-  geom_point(aes(fill=as.factor(subID)), pch=21, size=2, stroke=1.25) +
-  geom_line(aes(group=subID)) +
-  facet_wrap(~Group)
-g2<-g1+scale_x_continuous(name = "Time (Months)", breaks=c(0:18)) +
-  scale_y_continuous(name = "Score (0-100)",limits=c(0,100))
-g3 <- g2 + theme_bw() + 
-  theme(axis.text=element_text(size=14, colour="black"), 
-        axis.title=element_text(size=14,face="bold")) +
-  theme(strip.text.x = element_text(size = 14))+
-  theme(legend.position="none")
-
-plot(g3)
-
-
-## Scores with Last Observation Carried Forward --------------------------------
-g1<-ggplot(DATA, aes(x = time, y = score_LOCF)) +
-  geom_point(aes(fill=as.factor(subID)), pch=21, size=2, stroke=1.25) +
-  geom_line(aes(group=subID)) +
-  facet_wrap(~Group)
-g2<-g1+scale_x_continuous(name = "Time (Months)", breaks=c(0:18)) +
-  scale_y_continuous(name = "Score (0-100)",limits=c(0,100))
-g3 <- g2 + theme_bw() + 
-  theme(axis.text=element_text(size=14, colour="black"), 
-        axis.title=element_text(size=14,face="bold")) +
-  theme(strip.text.x = element_text(size = 14))+
-  theme(legend.position="none")
-
-plot(g3)
-
-
-
-## -------------- The Effects of Missingness on Time ---------------------------
-# Cubic model with complete data
-complete<-lmer(score~
-                 # Fixed-effects
-                 1+year.0*Group+year.0_sq*Group+year.0_cu*Group+
-                 # Random-effects
-                 (1+year.0+year.0_sq+year.0_cu|subID), data=DATA, REML=FALSE)
-
-comp_ANOVA <- ezANOVA(data = DATA,
-                     dv = .(score), 
-                     wid = .(subID),
-                     within = .(time_cat),
-                     between =.(Group),
-                     type = 3,
-                     detailed = TRUE,
-                     return_aov = TRUE)
-comp_ANOVA
-
-# Cubic model with data Missing at Random
-MAR<-lmer(score_MAR~
-            # Fixed-effects
-            1+year.0*Group+year.0_sq*Group+year.0_cu*Group+            
-            # Random-effects
-            (1+year.0+year.0_sq+year.0_cu|subID), data=DATA, REML=FALSE)
-
-
-# Cubic model with data Missing Not at Random
-MNAR<-lmer(score_NMAR~
-             # Fixed-effects
-             1+year.0*Group+year.0_sq*Group+year.0_cu*Group+             
-             # Random-effects
-             (1+year.0+year.0_sq+year.0_cu|subID), data=DATA, REML=FALSE)
-
-
-
-# Cubic model with Last Observation Carried Forward
-LOCF<-lmer(score_LOCF~
-             # Fixed-effects
-             1+year.0*Group+year.0_sq*Group+year.0_cu*Group+             
-             # Random-effects
-             (1+year.0+year.0_sq+year.0_cu|subID), data=DATA, REML=FALSE)
-
-LOCF_ANOVA <- ezANOVA(data = DATA,
-                      dv = .(score_LOCF), 
-                      wid = .(subID),
-                      within = .(time_cat),
-                      between =.(Group),
-                      type = 3,
-                      detailed = TRUE,
-                      return_aov = TRUE)
-LOCF_ANOVA
-
-
-
-summary(complete)
-summary(MAR)
-summary(MNAR)
-summary(LOCF)
-
-
-
-
 
 
 
