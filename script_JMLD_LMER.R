@@ -3,7 +3,7 @@
 
 # Loading the essential libraries. 
 library("ggplot2"); library("lme4"); library("car"); 
-library("dplyr"); library("ez");
+library("dplyr"); library("ez"); library("lmerTest")
 
 # If these packages are not installed already, run the following code:
 # install.packages("ggplot2"); install.packages("lme4"); install.packages("car"); 
@@ -118,7 +118,6 @@ time_ANOVA <- ezANOVA(data = DATA,
                      detailed = TRUE,
                      return_aov = TRUE)
 time_ANOVA
-
 
 
 ## Conditional Models ----------------------------------------------------------
