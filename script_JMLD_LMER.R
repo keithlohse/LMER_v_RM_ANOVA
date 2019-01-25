@@ -49,21 +49,6 @@ g3 <- g2 + theme_bw() +
 plot(g3)
 ## -----------------------------------------------------------------------------
 
-## Linear Fit for each person --------------------------------------------------
-g1<-ggplot(DATA, aes(x = time, y = score)) +
-  geom_point(aes(fill=as.factor(subID)), pch=21, size=2, stroke=1.25) +
-  stat_smooth(aes(col=subID), se=FALSE, method="lm") +
-  facet_wrap(~Group)
-g2<-g1+scale_x_continuous(name = "Time (Months)", limits=c(0,20)) +
-  scale_y_continuous(name = "Score (0-100)",limits=c(0,100))
-g3 <- g2 + theme_bw() + 
-  theme(axis.text=element_text(size=14, colour="black"), 
-        axis.title=element_text(size=14,face="bold")) +
-  theme(strip.text.x = element_text(size = 14))+
-  theme(legend.position="none")
-
-plot(g3)
-## -----------------------------------------------------------------------------
 
 
 
@@ -108,12 +93,12 @@ summary(time_LMER)
 
 ## RM ANOVA
 head(DATA)
-DATA$time_cat<-as.factor(DATA$time)
-summary(DATA$time_cat)
+DATA$month_cat<-as.factor(DATA$months)
+summary(DATA$month_cat)
 time_ANOVA <- ezANOVA(data = DATA,
                      dv = .(score), 
                      wid = .(subID),
-                     within = .(time_cat),
+                     within = .(month_cat),
                      type = 3,
                      detailed = TRUE,
                      return_aov = TRUE)
@@ -121,6 +106,14 @@ time_ANOVA
 
 
 ## Conditional Models ----------------------------------------------------------
+## Random Effects Model
+RE_model<-lmer(score~
+                  # Fixed-effects
+                  1+
+                  # Random-effects
+                  (1+year.0+year.0_sq+year.0_cu|subID), data=DATA, REML=FALSE)
+summary(RE_model)
+
 ## LMER
 cond_LMER<-lmer(score~
                 # Fixed-effects
@@ -136,7 +129,7 @@ summary(cond_LMER)
 cond_ANOVA <- ezANOVA(data = DATA,
                   dv = .(score), 
                   wid = .(subID),
-                  within = .(time_cat),
+                  within = .(month_cat),
                   between =.(Group),
                   type = 3,
                   detailed = TRUE,
@@ -253,7 +246,7 @@ complete<-lmer(score~
 comp_ANOVA <- ezANOVA(data = DATA,
                      dv = .(score), 
                      wid = .(subID),
-                     within = .(time_cat),
+                     within = .(month_cat),
                      between =.(Group),
                      type = 3,
                      detailed = TRUE,
@@ -287,7 +280,7 @@ LOCF<-lmer(score_LOCF~
 LOCF_ANOVA <- ezANOVA(data = DATA,
                       dv = .(score_LOCF), 
                       wid = .(subID),
-                      within = .(time_cat),
+                      within = .(month_cat),
                       between =.(Group),
                       type = 3,
                       detailed = TRUE,
@@ -306,7 +299,7 @@ MF<-lmer(score_MEAN_FILL~
 MF_ANOVA <- ezANOVA(data = DATA,
                       dv = .(score_MEAN_FILL), 
                       wid = .(subID),
-                      within = .(time_cat),
+                      within = .(month_cat),
                       between =.(Group),
                       type = 3,
                       detailed = TRUE,
@@ -326,6 +319,8 @@ summary(MAR)
 summary(MNAR)
 summary(LOCF)
 summary(MF)
+
+
 
 
 
