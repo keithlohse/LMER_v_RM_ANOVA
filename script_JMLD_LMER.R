@@ -10,6 +10,8 @@ library("dplyr"); library("ez"); library("lmerTest")
 # install.packages("dplyr"); install.packages("ez");
 
 
+
+
 ##----------------------- Data Cleaning and QA ---------------------------------
 ## Setting the Directory -------------------------------------------------------
 getwd()
@@ -80,6 +82,19 @@ summary(DATA$year.c)
 DATA$year.0_sq<-DATA$year.0^2
 DATA$year.0_cu<-DATA$year.0^3
 
+## RM ANOVA
+head(DATA)
+DATA$month_cat<-as.factor(DATA$months)
+summary(DATA$month_cat)
+time_ANOVA <- ezANOVA(data = DATA,
+                      dv = .(score), 
+                      wid = .(subID),
+                      within = .(month_cat),
+                      type = 3,
+                      detailed = TRUE,
+                      return_aov = TRUE)
+time_ANOVA
+
 ## LMER 
 time_LMER<-lmer(score~
                 # Fixed-effects
@@ -91,28 +106,22 @@ summary(time_LMER)
 
 
 
-## RM ANOVA
-head(DATA)
-DATA$month_cat<-as.factor(DATA$months)
-summary(DATA$month_cat)
-time_ANOVA <- ezANOVA(data = DATA,
-                     dv = .(score), 
-                     wid = .(subID),
-                     within = .(month_cat),
-                     type = 3,
-                     detailed = TRUE,
-                     return_aov = TRUE)
-time_ANOVA
+
 
 
 ## Conditional Models ----------------------------------------------------------
-## Random Effects Model
-RE_model<-lmer(score~
-                  # Fixed-effects
-                  1+
-                  # Random-effects
-                  (1+year.0+year.0_sq+year.0_cu|subID), data=DATA, REML=FALSE)
-summary(RE_model)
+## RM ANOVA
+cond_ANOVA <- ezANOVA(data = DATA,
+                      dv = .(score), 
+                      wid = .(subID),
+                      within = .(month_cat),
+                      between =.(Group),
+                      type = 3,
+                      detailed = TRUE,
+                      return_aov = TRUE)
+cond_ANOVA
+
+
 
 ## LMER
 cond_LMER<-lmer(score~
@@ -124,17 +133,6 @@ cond_LMER<-lmer(score~
 Anova(cond_LMER, type="III")
 summary(cond_LMER)
 
-
-## RM ANOVA
-cond_ANOVA <- ezANOVA(data = DATA,
-                  dv = .(score), 
-                  wid = .(subID),
-                  within = .(month_cat),
-                  between =.(Group),
-                  type = 3,
-                  detailed = TRUE,
-                  return_aov = TRUE)
-cond_ANOVA
 
 
 
@@ -471,4 +469,25 @@ plot(g3)
 
 
 
+
+## Plot Illustrating Fixed and Random Effects ----
+# subID<-c(rep("sub01",7),rep("sub02",7))
+# time<-c(seq(0:6),seq(0:6))
+# values<-c(0.65, 3.13, 6.16, 9.09, 11.27, 13.75, 15.93,
+#           0.97, 2.54, 5.21, 6.38, 8.95, 10.82, 12.04)
+# DEMO<-data.frame(subID, time, values)
+# 
+# g1<-ggplot(DEMO, aes(x = time, y = values)) +
+#   geom_point(aes(fill=as.factor(subID)), pch=21, size=2, stroke=1.25) +
+#   geom_line(aes(lty=subID), col="black") +
+#   stat_smooth(method="lm", se=FALSE, col="black", lwd=2)
+# g2<-g1+scale_x_continuous(name = "Time", limits=c(0,10)) +
+#   scale_y_continuous(name = "Values",limits=c(0,10))
+# g3 <- g2 + theme_bw() + 
+#   theme(axis.text=element_text(size=14, colour="black"), 
+#         axis.title=element_text(size=14,face="bold")) +
+#   theme(strip.text.x = element_text(size = 14))+
+#   theme(legend.position="none")
+# 
+# plot(g3)
 
