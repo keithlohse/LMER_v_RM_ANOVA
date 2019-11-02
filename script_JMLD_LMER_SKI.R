@@ -40,9 +40,14 @@ ggplot(DATA, aes(x = year, y = rank)) +
   # geom_point(aes(fill=as.factor(age_2018)), pch=21, size=2, stroke=1.25)
   scale_x_continuous(name = "Year") +
   scale_y_continuous(name = "National Points") +
+  theme_classic()+
+  scale_color_manual(values=c("#f0f0f0", "#d9d9d9", "#bdbdbd", "#969696",
+                              "#737373", "#525252", "#252525"))+
   theme(axis.text=element_text(size=14, colour="black"), 
-        axis.title=element_text(size=14,face="bold")) +
-  theme(strip.text.x = element_text(size = 14))+
+        axis.title=element_text(size=14,face="bold"), 
+        strip.text.x = element_text(size = 14),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 14))+
   guides(col=guide_legend(title="Age in 2018"))
 
 
@@ -55,9 +60,14 @@ ggplot(data = DATA,
   geom_boxplot(alpha = .8, notch=FALSE, col="black", lwd=1, outlier.shape=NA)+
   scale_x_discrete(name = "Year", breaks=c(2010, 2012, 2014, 2016, 2018)) +
   scale_y_continuous(name = "National Points") +
-  theme(axis.text=element_text(size=16, colour="black"),
-        axis.title=element_text(size=16, colour="black", face="bold"),
-        legend.position = "right")+
+  theme_classic()+
+  scale_fill_manual(values=c("#f0f0f0", "#d9d9d9", "#bdbdbd", "#969696",
+                              "#737373", "#525252", "#252525"))+
+  theme(axis.text=element_text(size=14, colour="black"), 
+        axis.title=element_text(size=14,face="bold"), 
+        strip.text.x = element_text(size = 14),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 14))+
   guides(fill=guide_legend(title="Age in 2018"))
 ## -----------------------------------------------------------------------------
 
@@ -101,22 +111,6 @@ summary(time_cube)
 anova(time_linear, time_quad, time_cube)
 AIC(time_quad)-AIC(time_linear)
 AIC(time_cube)-AIC(time_quad)
-
-
-
-
-ggplot(DATA, aes(x = year, y = rank)) +
-  stat_smooth(aes(group=subID, col=as.factor(age_2018)), method="lm",
-              se=FALSE, lwd=0.5)+ 
-  # geom_point(aes(fill=as.factor(age_2018)), pch=21, size=2, stroke=1.25)
-  scale_x_continuous(name = "Year") +
-  scale_y_continuous(name = "National Ranking") +
-  theme(axis.text=element_text(size=14, colour="black"), 
-        axis.title=element_text(size=14,face="bold")) +
-  theme(strip.text.x = element_text(size = 14))+
-  guides(col=guide_legend(title="Age in 2018"))
-
-
 
 
 
@@ -177,18 +171,19 @@ df<-right_join(x=df, y=df2, by="subID")
 head(df)
 
 ggplot(data = df, 
-       mapping = aes(x = hours.btw, y = Intercept)) +
-  geom_point(aes(fill=hours.btw), pch=21, size=1, stroke=1, 
-             col="black", alpha = .8) + 
+       mapping = aes(x = age_2018, y = Intercept)) +
+  geom_point(pch=21, size=1, stroke=1, col="black", alpha = .8) + 
   stat_smooth(method="lm", se=TRUE, col="black", lty=2) + 
-  scale_x_continuous(name="Average Hours/Year over Career\n(in Hundreds of Hours)", 
-                     limits = c(3,8))+
+  scale_x_continuous(name="Age in 2018", 
+                     limits = c(12,20))+
   scale_y_continuous(name="Points in 2018 (Intercept)")+
-  theme(axis.text.x=element_text(size=16, colour="black"),
-        axis.text.y=element_text(size=16, colour="black"),
-        title=element_text(size=16, face="bold"),
-        strip.text = element_text(size=16, face="bold"),
-        legend.position = "none")
+  theme_classic()+
+  theme(axis.text=element_text(size=14, colour="black"), 
+        axis.title=element_text(size=14,face="bold"), 
+        strip.text.x = element_text(size = 14),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 14),
+        legend.position="none")
 
 
 ## Comparing LMER to RM ANOVA Models -------------------------------------------
@@ -224,10 +219,15 @@ ggplot(DAT2, aes(x = year, y = rank)) +
   # geom_point(aes(fill=as.factor(age_2018)), pch=21, size=2, stroke=1.25)
   scale_x_continuous(name = "Year") +
   scale_y_continuous(name = "National Ranking") +
+  theme_classic()+
+  scale_color_manual(values=c("#bdbdbd", "#969696",
+                             "#737373", "#525252", "#252525"))+
   theme(axis.text=element_text(size=14, colour="black"), 
-        axis.title=element_text(size=14,face="bold")) +
-  theme(strip.text.x = element_text(size = 14))+
-  guides(col=guide_legend(title="Hours in Practice"))
+        axis.title=element_text(size=14,face="bold"), 
+        strip.text.x = element_text(size = 14),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 14))+
+  guides(col=guide_legend(title="Age in 2018"))
 
 
 
@@ -239,10 +239,15 @@ ggplot(data = DAT2,
   geom_boxplot(alpha = .8, notch=FALSE, col="black", lwd=1, outlier.shape=NA)+
   scale_x_discrete(name = "Year", breaks=c(2015, 2016, 2017, 2018)) +
   scale_y_continuous(name = "National Ranking") +
-  theme(axis.text=element_text(size=16, colour="black"),
-        axis.title=element_text(size=16, colour="black", face="bold"),
-        legend.position = "right")+
-  guides(fill=guide_legend(title="Hours in Practice"))
+  theme_classic()+
+  scale_fill_manual(values=c("#bdbdbd", "#969696",
+                             "#737373", "#525252", "#252525"))+
+  theme(axis.text=element_text(size=14, colour="black"), 
+        axis.title=element_text(size=14,face="bold"), 
+        strip.text.x = element_text(size = 14),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 14))+
+  guides(fill=guide_legend(title="Age in 2018"))
 
 
 ## Categorical Effect of Hours -------------------------------------------------
@@ -339,12 +344,12 @@ MEANS <- fdat1 %>%
 head(MEANS)
 
 g1<-ggplot(fdat1, aes(x = t, y = y)) +
-  geom_line(aes(group=ID, col=grp_cat), alpha=0.4)+
-  geom_line(data=MEANS, aes(col=grp_cat), lwd=1.5)+
-  scale_color_manual(values=c("#E69F00", "#56B4E9"), labels=c("A","B"))
-g2<-g1+scale_x_continuous(name = "Time (Arbitrary Units)") +
-  scale_y_continuous(name = "Performance (Arbitrary Units)")
-g3 <- g2 + theme_grey() + 
+  geom_line(aes(group=ID, col=grp_cat), alpha=0.6)+
+  geom_line(data=MEANS, aes(col=grp_cat), lwd=1.25)+
+  scale_color_manual(values=c("#000000", "#969696"), labels=c("A","B"))
+g2<-g1+scale_x_continuous(name = "Time (Arbitrary Units)", limits=c(0,20)) +
+  scale_y_continuous(name = "Performance (Arbitrary Units)", limits=c(0,100))
+g3 <- g2 + theme_classic() + 
   labs(color = "Group") +
   theme(axis.text=element_text(size=14, colour="black"), 
         axis.title=element_text(size=14,face="bold"), 
@@ -375,12 +380,12 @@ MEANS <- fdat2 %>%
 head(MEANS)
 
 g1<-ggplot(fdat2, aes(x = t, y = y)) +
-  geom_line(aes(group=ID, col=grp_cat), alpha=0.4)+
-  geom_line(data=MEANS, aes(col=grp_cat), lwd=1.5)+
-  scale_color_manual(values=c("#E69F00", "#56B4E9"), labels=c("A","B"))
-g2<-g1+scale_x_continuous(name = "Time (Arbitrary Units)") +
-  scale_y_continuous(name = "Performance (Arbitrary Units)")
-g3 <- g2 + theme_grey() + 
+  geom_line(aes(group=ID, col=grp_cat), alpha=0.6)+
+  geom_line(data=MEANS, aes(col=grp_cat), lwd=1.25)+
+  scale_color_manual(values=c("#000000", "#969696"), labels=c("A","B"))
+g2<-g1+scale_x_continuous(name = "Time (Arbitrary Units)", limits=c(0,20)) +
+  scale_y_continuous(name = "Performance (Arbitrary Units)", limits=c(0,100))
+g3 <- g2 + theme_classic() + 
   labs(color = "Group") +
   theme(axis.text=element_text(size=14, colour="black"), 
         axis.title=element_text(size=14,face="bold"), 
@@ -388,9 +393,7 @@ g3 <- g2 + theme_grey() +
         legend.title=element_text(size=14,face="bold"),
         strip.text.x = element_text(size = 14), 
         legend.position="right")
-
 print(g3)
-
 
 
 
