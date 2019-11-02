@@ -1,5 +1,6 @@
-# ACRM 2018 Longitudinal Data Analysis Workshop
-# By Keith Lohse, Neurorehabilitation Informatics Lab, 2018-10-19
+# Title: Modeling Longitudinal Outcomes: A Contrast of Two Methods
+# Journal: Currently under review at the Journal of Motor Learning and Development
+# By Keith Lohse and Jincheng Shen, 2019-11-02
 
 # Loading the essential libraries. 
 library("ggplot2"); library("lme4"); library("car"); 
@@ -13,9 +14,11 @@ library("dplyr"); library("ez"); library("lmerTest")
 ##----------------------- Data Cleaning and QA ---------------------------------
 ## Setting the Directory -------------------------------------------------------
 getwd()
-setwd("C:/Users/u6015231/Box Sync/Collaboration/Al Kozlowski/")
+# Set your working directory to the file location on your computer. 
+# Make sure that you have also downloaded all of the data from GitHub.
+setwd("/Set_File_Path_Here")
 list.files()
-# Make sure that the file data_session1.csv is saved in your working directory.
+# Make sure that the file data_JMLD_SKI.csv is saved in your working directory.
 
 # Import the .csv file into R. 
 # We will save this file in the R environment as an object called "DATA".
@@ -28,7 +31,7 @@ head(DATA)
 
 # UPDATE
 # Alternately you can also download the data file from the web here:
-# DATA <- read.csv("https://raw.githubusercontent.com/keithlohse/LMER_v_RM_ANOVA/master/data_JMLD.csv")
+# DATA <- read.csv("https://raw.githubusercontent.com/keithlohse/LMER_v_RM_ANOVA/master/data_JMLD_SKI.csv")
 
 ## ----------------------- Basic Data Visualization ----------------------------
 ## Figure 1. Rank by Age and Time ----------------------------------------------
@@ -275,6 +278,199 @@ time_aov<- ezANOVA(data = DAT2,
                    return_aov = TRUE)
 time_aov
 
+
+
+
+
+
+
+
+
+
+
+
+
+## Nonlinear Mixed-Effects Models Using a Negative Exponential Function
+library(mvtnorm); library(lme4); library(MASS);
+library(ggplot2); library(dplyr); library(nlme);
+
+# Because nonlinear models use an iterative testing procedure to find 
+# parameter values that reduce the deviance, we will want to set a "seed"
+# so that we get consistent results.
+set.seed(100)
+
+# Additionally, in order to ensure our nonlinear model converge, we need to set
+# starting values for our different parameters. These starting values can often
+# be determined from a visual inspection of the data or from summary statistics,
+# see Pineheiro & Bates. 
+
+# For our particular data, each row represents 1 observation within a person
+# within data you need at least: y - outcome, grp - group indicator, t - time.
+# For the given 4 cases, we use starting values of: 
+##             case1: start = c(0, 0, 90, 0, -0.3, -0.3),
+##             case2: start = c(0, 10, 90, -10, -0.5, 0),
+##             case3: start = c(90, 0, -90, 0, -0.3, 0.3),
+##             case4: start = c(90, -10, -90, 10, -0.3, 0),
+# Where:
+# The first value is an estimate for the asmyptote
+# The second value is an estimate for the group difference in asymptote
+# The third value is an estimate of the change (asymptote to psuedo intercept)
+# The fourth value is an estimate of the group difference in change
+# The fifth values is an estimate of the rate parameter
+# The sixth value is an estimate of the group difference in the rate parameter.
+
+
+# Case 1: Error/time as the DV; groups differ in rate: 
+fdat1<-read.csv("./data_NLME_case01.csv", header=TRUE)
+head(fdat1)
+neg_exp_rand_mod <- nlme(y ~ b_1i + b_2*grp + (b_3 + b_4*grp)*(exp(b_5i * t + b_6 * grp * t)),
+                         data = fdat1,
+                         fixed = b_1i + b_2 + b_3 + b_4 + b_5i + b_6 ~ 1,
+                         random = b_1i + b_5i ~ 1,
+                         groups = ~ ID,
+                         start = c(0, 0, 90, 0, -0.3, -0.3),
+                         na.action = na.omit)
+summary(neg_exp_rand_mod)
+
+fdat1$grp_cat <- factor(fdat1$grp)
+MEANS <- fdat1 %>%
+  group_by(grp_cat, t) %>%
+  summarize(y = mean(y, na.rm=TRUE))
+head(MEANS)
+
+g1<-ggplot(fdat1, aes(x = t, y = y)) +
+  geom_line(aes(group=ID, col=grp_cat), alpha=0.4)+
+  geom_line(data=MEANS, aes(col=grp_cat), lwd=1.5)+
+  scale_color_manual(values=c("#E69F00", "#56B4E9"), labels=c("A","B"))
+g2<-g1+scale_x_continuous(name = "Time (Arbitrary Units)") +
+  scale_y_continuous(name = "Performance (Arbitrary Units)")
+g3 <- g2 + theme_grey() + 
+  labs(color = "Group") +
+  theme(axis.text=element_text(size=14, colour="black"), 
+        axis.title=element_text(size=14,face="bold"), 
+        legend.text=element_text(size=14,face="bold"),
+        legend.title=element_text(size=14,face="bold"),
+        strip.text.x = element_text(size = 14), 
+        legend.position="right")
+
+print(g3)
+
+
+# Case 2: Error/time as the DV; groups differ in asmyptote: 
+fdat2<-read.csv("./data_NLME_case02.csv", header=TRUE)
+head(fdat2)
+neg_exp_rand_mod <- nlme(y ~ b_1i + b_2*grp + (b_3 + b_4*grp)*(exp(b_5i * t + b_6 * grp * t)),
+                         data = fdat2,
+                         fixed = b_1i + b_2 + b_3 + b_4 + b_5i + b_6 ~ 1,
+                         random = b_1i + b_5i ~ 1,
+                         groups = ~ ID,
+                         start = c(0, 10, 90, -10, -0.5, 0),
+                         na.action = na.omit)
+summary(neg_exp_rand_mod)
+
+fdat2$grp_cat <- factor(fdat2$grp)
+MEANS <- fdat2 %>%
+  group_by(grp_cat, t) %>%
+  summarize(y = mean(y, na.rm=TRUE))
+head(MEANS)
+
+g1<-ggplot(fdat2, aes(x = t, y = y)) +
+  geom_line(aes(group=ID, col=grp_cat), alpha=0.4)+
+  geom_line(data=MEANS, aes(col=grp_cat), lwd=1.5)+
+  scale_color_manual(values=c("#E69F00", "#56B4E9"), labels=c("A","B"))
+g2<-g1+scale_x_continuous(name = "Time (Arbitrary Units)") +
+  scale_y_continuous(name = "Performance (Arbitrary Units)")
+g3 <- g2 + theme_grey() + 
+  labs(color = "Group") +
+  theme(axis.text=element_text(size=14, colour="black"), 
+        axis.title=element_text(size=14,face="bold"), 
+        legend.text=element_text(size=14,face="bold"),
+        legend.title=element_text(size=14,face="bold"),
+        strip.text.x = element_text(size = 14), 
+        legend.position="right")
+
+print(g3)
+
+
+
+
+
+# Case 3: Accuracy as the DV; groups differ in rate: 
+fdat3<-read.csv("./data_NLME_case03.csv", header=TRUE)
+head(fdat3)
+neg_exp_rand_mod <- nlme(y ~ b_1i + b_2*grp + (b_3 + b_4*grp)*(exp(b_5i * t + b_6 * grp * t)),
+                         data = fdat3,
+                         fixed = b_1i + b_2 + b_3 + b_4 + b_5i + b_6 ~ 1,
+                         random = b_1i + b_5i ~ 1,
+                         groups = ~ ID,
+                         start = c(90, 0, -90, 0, -0.3, 0.3),
+                         na.action = na.omit)
+summary(neg_exp_rand_mod)
+
+fdat3$grp_cat <- factor(fdat3$grp)
+MEANS <- fdat3 %>%
+  group_by(grp_cat, t) %>%
+  summarize(y = mean(y, na.rm=TRUE))
+head(MEANS)
+
+g1<-ggplot(fdat3, aes(x = t, y = y)) +
+  geom_line(aes(group=ID, col=grp_cat), alpha=0.4)+
+  geom_line(data=MEANS, aes(col=grp_cat), lwd=1.5)+
+  scale_color_manual(values=c("#E69F00", "#56B4E9"), labels=c("A","B"))
+g2<-g1+scale_x_continuous(name = "Time (Arbitrary Units)") +
+  scale_y_continuous(name = "Performance (Arbitrary Units)")
+g3 <- g2 + theme_grey() + 
+  labs(color = "Group") +
+  theme(axis.text=element_text(size=14, colour="black"), 
+        axis.title=element_text(size=14,face="bold"), 
+        legend.text=element_text(size=14,face="bold"),
+        legend.title=element_text(size=14,face="bold"),
+        strip.text.x = element_text(size = 14), 
+        legend.position="right")
+
+print(g3)
+
+
+
+
+
+
+
+# Case 4: Accuracy as the DV; groups differ in asymptote: 
+fdat4<-read.csv("./data_NLME_case04.csv", header=TRUE)
+
+head(fdat4)
+neg_exp_rand_mod <- nlme(y ~ b_1i + b_2*grp + (b_3 + b_4*grp)*(exp(b_5i * t + b_6 * grp * t)),
+                         data = fdat4,
+                         fixed = b_1i + b_2 + b_3 + b_4 + b_5i + b_6 ~ 1,
+                         random = b_1i + b_5i ~ 1,
+                         groups = ~ ID,
+                         start = c(90, -10, -90, 10, -0.3, 0),
+                         na.action = na.omit)
+summary(neg_exp_rand_mod)
+
+fdat4$grp_cat <- factor(fdat4$grp)
+MEANS <- fdat4 %>%
+  group_by(grp_cat, t) %>%
+  summarize(y = mean(y, na.rm=TRUE))
+head(MEANS)
+
+g1<-ggplot(fdat4, aes(x = t, y = y)) +
+  geom_line(aes(group=ID, col=grp_cat), alpha=0.4)+
+  geom_line(data=MEANS, aes(col=grp_cat), lwd=1.5)+
+  scale_color_manual(values=c("#E69F00", "#56B4E9"), labels=c("A","B"))
+g2<-g1+scale_x_continuous(name = "Time (Arbitrary Units)") +
+  scale_y_continuous(name = "Performance (Arbitrary Units)")
+g3 <- g2 + theme_grey() + 
+  labs(color = "Group") +
+  theme(axis.text=element_text(size=14, colour="black"), 
+        axis.title=element_text(size=14,face="bold"), 
+        legend.text=element_text(size=14,face="bold"),
+        legend.title=element_text(size=14,face="bold"),
+        strip.text.x = element_text(size = 14), 
+        legend.position="right")
+
+print(g3)
 
 
 
