@@ -171,11 +171,11 @@ df<-right_join(x=df, y=df2, by="subID")
 head(df)
 
 ggplot(data = df, 
-       mapping = aes(x = age_2018, y = Intercept)) +
+       mapping = aes(x = hours.btw, y = Intercept)) +
   geom_point(pch=21, size=1, stroke=1, col="black", alpha = .8) + 
   stat_smooth(method="lm", se=TRUE, col="black", lty=2) + 
-  scale_x_continuous(name="Age in 2018", 
-                     limits = c(12,20))+
+  scale_x_continuous(name="Average Hours/Year over Career\n(in Hundreds of Hours)", 
+                     limits = c(3,8))+
   scale_y_continuous(name="Points in 2018 (Intercept)")+
   theme_classic()+
   theme(axis.text=element_text(size=14, colour="black"), 
@@ -348,7 +348,7 @@ g1<-ggplot(fdat1, aes(x = t, y = y)) +
   geom_line(data=MEANS, aes(col=grp_cat), lwd=1.25)+
   scale_color_manual(values=c("#000000", "#969696"), labels=c("A","B"))
 g2<-g1+scale_x_continuous(name = "Time (Arbitrary Units)", limits=c(0,20)) +
-  scale_y_continuous(name = "Performance (Arbitrary Units)", limits=c(0,100))
+  scale_y_continuous(name = "Performance (Arbitrary Units)", limits=c(-2,100))
 g3 <- g2 + theme_classic() + 
   labs(color = "Group") +
   theme(axis.text=element_text(size=14, colour="black"), 
@@ -378,13 +378,14 @@ MEANS <- fdat2 %>%
   group_by(grp_cat, t) %>%
   summarize(y = mean(y, na.rm=TRUE))
 head(MEANS)
+xtabs(~t, data=fdat2)
 
 g1<-ggplot(fdat2, aes(x = t, y = y)) +
   geom_line(aes(group=ID, col=grp_cat), alpha=0.6)+
   geom_line(data=MEANS, aes(col=grp_cat), lwd=1.25)+
   scale_color_manual(values=c("#000000", "#969696"), labels=c("A","B"))
 g2<-g1+scale_x_continuous(name = "Time (Arbitrary Units)", limits=c(0,20)) +
-  scale_y_continuous(name = "Performance (Arbitrary Units)", limits=c(0,100))
+  scale_y_continuous(name = "Performance (Arbitrary Units)", limits=c(-2,100))
 g3 <- g2 + theme_classic() + 
   labs(color = "Group") +
   theme(axis.text=element_text(size=14, colour="black"), 
@@ -417,12 +418,12 @@ MEANS <- fdat3 %>%
 head(MEANS)
 
 g1<-ggplot(fdat3, aes(x = t, y = y)) +
-  geom_line(aes(group=ID, col=grp_cat), alpha=0.4)+
-  geom_line(data=MEANS, aes(col=grp_cat), lwd=1.5)+
-  scale_color_manual(values=c("#E69F00", "#56B4E9"), labels=c("A","B"))
-g2<-g1+scale_x_continuous(name = "Time (Arbitrary Units)") +
-  scale_y_continuous(name = "Performance (Arbitrary Units)")
-g3 <- g2 + theme_grey() + 
+  geom_line(aes(group=ID, col=grp_cat), alpha=0.6)+
+  geom_line(data=MEANS, aes(col=grp_cat), lwd=1.25)+
+  scale_color_manual(values=c("#000000", "#969696"), labels=c("A","B"))
+g2<-g1+scale_x_continuous(name = "Time (Arbitrary Units)", limits=c(0,20)) +
+  scale_y_continuous(name = "Performance (Arbitrary Units)", limits=c(-2,100))
+g3 <- g2 + theme_classic() + 
   labs(color = "Group") +
   theme(axis.text=element_text(size=14, colour="black"), 
         axis.title=element_text(size=14,face="bold"), 
@@ -430,7 +431,6 @@ g3 <- g2 + theme_grey() +
         legend.title=element_text(size=14,face="bold"),
         strip.text.x = element_text(size = 14), 
         legend.position="right")
-
 print(g3)
 
 
@@ -459,12 +459,12 @@ MEANS <- fdat4 %>%
 head(MEANS)
 
 g1<-ggplot(fdat4, aes(x = t, y = y)) +
-  geom_line(aes(group=ID, col=grp_cat), alpha=0.4)+
-  geom_line(data=MEANS, aes(col=grp_cat), lwd=1.5)+
-  scale_color_manual(values=c("#E69F00", "#56B4E9"), labels=c("A","B"))
-g2<-g1+scale_x_continuous(name = "Time (Arbitrary Units)") +
-  scale_y_continuous(name = "Performance (Arbitrary Units)")
-g3 <- g2 + theme_grey() + 
+  geom_line(aes(group=ID, col=grp_cat), alpha=0.6)+
+  geom_line(data=MEANS, aes(col=grp_cat), lwd=1.25)+
+  scale_color_manual(values=c("#000000", "#969696"), labels=c("A","B"))
+g2<-g1+scale_x_continuous(name = "Time (Arbitrary Units)", limits=c(0,20)) +
+  scale_y_continuous(name = "Performance (Arbitrary Units)", limits=c(-2,100))
+g3 <- g2 + theme_classic() + 
   labs(color = "Group") +
   theme(axis.text=element_text(size=14, colour="black"), 
         axis.title=element_text(size=14,face="bold"), 
@@ -472,7 +472,6 @@ g3 <- g2 + theme_grey() +
         legend.title=element_text(size=14,face="bold"),
         strip.text.x = element_text(size = 14), 
         legend.position="right")
-
 print(g3)
 
 
