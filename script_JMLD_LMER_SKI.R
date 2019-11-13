@@ -113,6 +113,39 @@ AIC(time_quad)-AIC(time_linear)
 AIC(time_cube)-AIC(time_quad)
 
 
+# Testing a negative exponential model of time.
+# This requires us to install and the nlme package:
+library(nlme)
+
+# Additionally, in order to ensure our nonlinear model converge, we need to set
+# starting values for our different parameters. These starting values can often
+# be determined from a visual inspection of the data or from summary statistics,
+# see Pineheiro & Bates. 
+
+# For the uncontidiional model of time, we want to see how points change overtime 
+# in a person, so we might need something like:
+##             start = c(0, -500, -1)
+# Where:
+# The first value is an estimate for the asmyptote
+# The second value is an estimate of the change (asymptote to psuedo intercept)
+# The third value is an estimate of the rate parameter
+
+head(DATA)
+summary(DATA$rank)
+# Note that our y-variable is "rank" and our x-variable is year2018
+neg_exp_rand_mod4 <- nlme(rank ~ b_1i + (b_2)*(exp(b_3i*year2018)),
+                         data = DATA,
+                         fixed = b_1i + b_2 + b_3i ~ 1,
+                         random = b_1i + b_3i ~ 1,
+                         groups = ~ subID,
+                         start = c(0, -500, -1),
+                         na.action = na.omit)
+# Note at in this case we get a warning about the "singular precision matrix"
+# In this case, that is because the fit of the model was so poor. Visual inspection
+# of the data suggest that these data do not really follow an exponential function
+# but we still attempted to fit one for illustrative purposes.
+summary(neg_exp_rand_mod4)
+AIC(time_quad)-AIC(neg_exp_rand_mod4)
 
 
 ## Conditional Models ----------------------------------------------------------
